@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import time
 import json
+import random
 from data_generator import generate_metrics_data, generate_media_quality_data, generate_system_event_data
 from anomaly_detection import detect_anomalies, train_isolation_forest, train_autoencoder
 from predictive_maintenance import PredictiveMaintenanceModel, forecast_metrics, analyze_system_health_trends
@@ -591,11 +592,14 @@ def update_dashboard():
                 height=350
             )
             
+            # Make a new random key for forecast chart
+            rand_key4 = random.randint(300001, 400000)
+            
             # Display the forecast chart
             forecast_chart_placeholder.plotly_chart(
                 fig,
                 use_container_width=True,
-                key="forecast_chart"
+                key=f"forecast_chart_{rand_key4}"
             )
             
             # Display trend analysis if available
@@ -621,10 +625,13 @@ def update_dashboard():
             st.session_state.thresholds
         )
         
+        # Make a new random key for system health gauge
+        rand_key5 = random.randint(400001, 500000)
+        
         system_health_placeholder.plotly_chart(
             create_system_health_gauge("System Health", system_health, 60, min_value=0, max_value=100),
             use_container_width=True,
-            key="system_health_gauge"
+            key=f"system_health_gauge_{rand_key5}"
         )
         
         # Train and use predictive maintenance model if enough data is available
