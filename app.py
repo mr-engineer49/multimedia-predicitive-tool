@@ -100,6 +100,16 @@ if 'anomaly_models_trained' not in st.session_state:
     st.session_state.isolation_forest = None
     st.session_state.autoencoder = None
     st.session_state.predictive_model_trained = False
+    
+# Media content analysis related states
+if 'uploaded_media' not in st.session_state:
+    st.session_state.uploaded_media = {}
+    
+if 'media_analysis_results' not in st.session_state:
+    st.session_state.media_analysis_results = {}
+    
+if 'processed_media_count' not in st.session_state:
+    st.session_state.processed_media_count = 0
 
 if 'thresholds' not in st.session_state:
     st.session_state.thresholds = {
@@ -192,7 +202,7 @@ with st.sidebar:
     st.markdown("**Last Update:** {}".format(datetime.now().strftime("%Y-%m-%d")))
 
 # Main dashboard layout with tabs
-tab1, tab2 = st.tabs(["📊 Real-time Monitoring", "📈 Predictive Analysis"])
+tab1, tab2, tab3 = st.tabs(["📊 Real-time Monitoring", "📈 Predictive Analysis", "🔍 Media Content Analysis"])
 
 # Tab 1: Real-time monitoring dashboard
 with tab1:
@@ -736,6 +746,289 @@ def update_dashboard():
                 )
     else:
         alerts_placeholder.info("No alerts detected. System running normally.")
+
+# Media content analysis section
+with tab3:
+    st.header("🎬 Media Content Analysis")
+    
+    st.markdown("""
+    Upload your media files (images, videos, audio) for analysis and predictive maintenance checks.
+    The system will analyze the content and provide insights into potential quality issues and optimization opportunities.
+    """)
+    
+    # File upload section
+    st.subheader("Upload Media Content")
+    file_types = ["Image", "Video", "Audio"]
+    selected_type = st.selectbox("Select Media Type", file_types)
+    
+    # Display appropriate file uploader based on selection
+    if selected_type == "Image":
+        uploaded_file = st.file_uploader("Upload Image File", type=["jpg", "jpeg", "png", "webp", "bmp"])
+        file_info = "Supported formats: JPG, PNG, WebP, BMP"
+    elif selected_type == "Video":
+        uploaded_file = st.file_uploader("Upload Video File", type=["mp4", "mov", "avi", "mkv"])
+        file_info = "Supported formats: MP4, MOV, AVI, MKV"
+    else:  # Audio
+        uploaded_file = st.file_uploader("Upload Audio File", type=["mp3", "wav", "ogg", "flac"])
+        file_info = "Supported formats: MP3, WAV, OGG, FLAC"
+    
+    st.caption(file_info)
+    
+    # Analysis options
+    st.subheader("Analysis Options")
+    analysis_cols = st.columns(3)
+    
+    with analysis_cols[0]:
+        quality_check = st.checkbox("Quality Assessment", value=True)
+    with analysis_cols[1]:
+        content_analysis = st.checkbox("Content Analysis", value=True)
+    with analysis_cols[2]:
+        encoding_check = st.checkbox("Encoding Analysis", value=True)
+    
+    # Advanced options
+    with st.expander("Advanced Analysis Options"):
+        if selected_type == "Image":
+            resolution_check = st.checkbox("Check Resolution Optimization", value=True)
+            metadata_check = st.checkbox("Extract & Analyze Metadata", value=True)
+            compression_level = st.slider("Compression Analysis Sensitivity", 1, 10, 5)
+        elif selected_type == "Video":
+            frame_rate_check = st.checkbox("Frame Rate Analysis", value=True)
+            bitrate_check = st.checkbox("Bitrate Analysis", value=True)
+            codec_check = st.checkbox("Codec Efficiency Check", value=True)
+        else:  # Audio
+            sample_rate_check = st.checkbox("Sample Rate Analysis", value=True)
+            bitrate_check = st.checkbox("Bitrate Analysis", value=True)
+            channel_check = st.checkbox("Channel Configuration Check", value=True)
+    
+    # Process button
+    if uploaded_file is not None:
+        file_id = f"{selected_type}_{len(st.session_state.uploaded_media) + 1}"
+        
+        if st.button("Analyze Media"):
+            with st.spinner(f"Analyzing {selected_type.lower()} content..."):
+                # Store the file in session state
+                st.session_state.uploaded_media[file_id] = {
+                    'type': selected_type,
+                    'name': uploaded_file.name,
+                    'timestamp': datetime.now(),
+                    'content': uploaded_file.getvalue()
+                }
+                
+                # Generate simulated analysis results based on media type
+                results = {}
+                
+                if selected_type == "Image":
+                    results = {
+                        'quality_score': round(np.random.uniform(60, 95), 1),
+                        'resolution': f"{np.random.randint(800, 4000)}x{np.random.randint(600, 3000)}",
+                        'format_efficiency': round(np.random.uniform(50, 95), 1),
+                        'compression_level': np.random.randint(1, 10),
+                        'metadata_issues': np.random.randint(0, 3),
+                        'optimization_potential': round(np.random.uniform(10, 40), 1)
+                    }
+                    
+                    # Add potential issues
+                    issues = []
+                    if results['quality_score'] < 70:
+                        issues.append("Image quality is below recommended threshold")
+                    if results['format_efficiency'] < 70:
+                        issues.append("Image format is not optimal for web delivery")
+                    if results['compression_level'] > 7:
+                        issues.append("Image appears to be over-compressed")
+                    if results['metadata_issues'] > 0:
+                        issues.append(f"Found {results['metadata_issues']} metadata issues")
+                    
+                    if not issues:
+                        issues.append("No significant issues detected")
+                    
+                    results['issues'] = issues
+                    
+                elif selected_type == "Video":
+                    results = {
+                        'quality_score': round(np.random.uniform(60, 95), 1),
+                        'resolution': f"{np.random.randint(800, 4000)}x{np.random.randint(600, 3000)}",
+                        'frame_rate': np.random.choice([24, 30, 60, 120]),
+                        'bitrate': f"{np.random.randint(1, 20)} Mbps",
+                        'codec_efficiency': round(np.random.uniform(50, 95), 1),
+                        'encoding_issues': np.random.randint(0, 5),
+                        'optimization_potential': round(np.random.uniform(10, 50), 1)
+                    }
+                    
+                    # Add potential issues
+                    issues = []
+                    if results['quality_score'] < 70:
+                        issues.append("Video quality is below recommended threshold")
+                    if results['codec_efficiency'] < 70:
+                        issues.append("Video codec is not optimal for streaming")
+                    if results['encoding_issues'] > 0:
+                        issues.append(f"Found {results['encoding_issues']} encoding issues")
+                    
+                    if not issues:
+                        issues.append("No significant issues detected")
+                    
+                    results['issues'] = issues
+                    
+                else:  # Audio
+                    results = {
+                        'quality_score': round(np.random.uniform(60, 95), 1),
+                        'sample_rate': np.random.choice([8000, 16000, 44100, 48000, 96000]),
+                        'bitrate': f"{np.random.choice([96, 128, 192, 256, 320])} kbps",
+                        'channels': np.random.choice(["Mono", "Stereo", "5.1 Surround"]),
+                        'codec_efficiency': round(np.random.uniform(50, 95), 1),
+                        'encoding_issues': np.random.randint(0, 3),
+                        'optimization_potential': round(np.random.uniform(10, 40), 1)
+                    }
+                    
+                    # Add potential issues
+                    issues = []
+                    if results['quality_score'] < 70:
+                        issues.append("Audio quality is below recommended threshold")
+                    if results['codec_efficiency'] < 70:
+                        issues.append("Audio codec is not optimal for streaming")
+                    if results['encoding_issues'] > 0:
+                        issues.append(f"Found {results['encoding_issues']} encoding issues")
+                    
+                    if not issues:
+                        issues.append("No significant issues detected")
+                    
+                    results['issues'] = issues
+                
+                # Store analysis results
+                st.session_state.media_analysis_results[file_id] = results
+                st.session_state.processed_media_count += 1
+                
+                st.success(f"{selected_type} analyzed successfully!")
+    
+    # Display analysis results
+    if st.session_state.processed_media_count > 0:
+        st.header("Analysis Results")
+        
+        # Create tabs for each processed media file
+        media_tabs = st.tabs([f"{info['type']}: {info['name']}" for file_id, info in st.session_state.uploaded_media.items()])
+        
+        for i, (file_id, media_info) in enumerate(st.session_state.uploaded_media.items()):
+            with media_tabs[i]:
+                if file_id in st.session_state.media_analysis_results:
+                    results = st.session_state.media_analysis_results[file_id]
+                    
+                    # Display uploaded media
+                    if media_info['type'] == "Image":
+                        st.image(media_info['content'], caption=media_info['name'])
+                    elif media_info['type'] == "Video":
+                        st.video(media_info['content'])
+                    else:  # Audio
+                        st.audio(media_info['content'])
+                    
+                    # Create two columns for results
+                    res_col1, res_col2 = st.columns([2, 1])
+                    
+                    with res_col1:
+                        # Display results in a nice format
+                        st.subheader("Technical Analysis")
+                        
+                        if media_info['type'] == "Image":
+                            st.markdown(f"**Resolution:** {results['resolution']}")
+                            st.markdown(f"**Format Efficiency:** {results['format_efficiency']}%")
+                            st.markdown(f"**Compression Level:** {results['compression_level']}/10")
+                            st.markdown(f"**Metadata Issues:** {results['metadata_issues']}")
+                        elif media_info['type'] == "Video":
+                            st.markdown(f"**Resolution:** {results['resolution']}")
+                            st.markdown(f"**Frame Rate:** {results['frame_rate']} fps")
+                            st.markdown(f"**Bitrate:** {results['bitrate']}")
+                            st.markdown(f"**Codec Efficiency:** {results['codec_efficiency']}%")
+                            st.markdown(f"**Encoding Issues:** {results['encoding_issues']}")
+                        else:  # Audio
+                            st.markdown(f"**Sample Rate:** {results['sample_rate']} Hz")
+                            st.markdown(f"**Bitrate:** {results['bitrate']}")
+                            st.markdown(f"**Channels:** {results['channels']}")
+                            st.markdown(f"**Codec Efficiency:** {results['codec_efficiency']}%")
+                            st.markdown(f"**Encoding Issues:** {results['encoding_issues']}")
+                        
+                        # Display identified issues
+                        st.subheader("Identified Issues")
+                        for issue in results['issues']:
+                            st.markdown(f"- {issue}")
+                            
+                        # Display timestamp
+                        st.caption(f"Analyzed on: {media_info['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}")
+                    
+                    with res_col2:
+                        # Display quality score gauge
+                        st.subheader("Quality Score")
+                        
+                        # Generate a random key for the gauge to avoid conflicts
+                        import random
+                        gauge_key = random.randint(600001, 700000)
+                        
+                        quality_threshold = 75
+                        st.plotly_chart(
+                            create_system_health_gauge("Quality", results['quality_score'], quality_threshold),
+                            use_container_width=True,
+                            key=f"quality_gauge_{gauge_key}"
+                        )
+                        
+                        # Optimization recommendation
+                        st.subheader("Optimization Potential")
+                        st.info(f"{results['optimization_potential']}% improvement possible")
+                        
+                        # Provide recommendations
+                        st.subheader("Recommendations")
+                        if results['quality_score'] < 70:
+                            st.markdown("• Consider using a higher quality source")
+                        
+                        if media_info['type'] == "Image" and results['format_efficiency'] < 70:
+                            st.markdown("• Convert to a more efficient format (WebP)")
+                        elif media_info['type'] == "Video" and results['codec_efficiency'] < 70:
+                            st.markdown("• Re-encode using H.265/HEVC or AV1")
+                        elif media_info['type'] == "Audio" and results['codec_efficiency'] < 70:
+                            st.markdown("• Consider using AAC or Opus codec")
+                            
+                        if results['optimization_potential'] > 30:
+                            st.markdown("• Significant optimization possible")
+                            st.markdown("• Consider professional re-encoding")
+                else:
+                    st.warning("Analysis results not available for this file.")
+        
+        # Summary statistics
+        st.header("Media Library Health Summary")
+        
+        # Calculate average quality score and other metrics
+        avg_quality = np.mean([results['quality_score'] for results in st.session_state.media_analysis_results.values()])
+        total_issues = sum([len(results['issues']) for results in st.session_state.media_analysis_results.values()])
+        avg_optimization = np.mean([results['optimization_potential'] for results in st.session_state.media_analysis_results.values()])
+        
+        # Display summary metrics
+        summary_cols = st.columns(4)
+        summary_cols[0].metric("Files Analyzed", st.session_state.processed_media_count)
+        summary_cols[1].metric("Avg. Quality Score", f"{avg_quality:.1f}%")
+        summary_cols[2].metric("Total Issues", total_issues)
+        summary_cols[3].metric("Avg. Optimization Potential", f"{avg_optimization:.1f}%")
+        
+        # Display overall health assessment
+        if avg_quality >= 85:
+            health_status = "Excellent"
+            health_color = "#36B37E"  # Green
+        elif avg_quality >= 70:
+            health_status = "Good"
+            health_color = "#00B8D9"  # Blue
+        elif avg_quality >= 50:
+            health_status = "Fair"
+            health_color = "#FFAB00"  # Yellow/Orange
+        else:
+            health_status = "Poor"
+            health_color = "#FF5630"  # Red
+        
+        st.markdown(f"""
+        <div style="padding: 15px; border-radius: 5px; background-color: {health_color}33; border-left: 5px solid {health_color}; margin: 10px 0;">
+            <strong style="color: {health_color};">Media Library Health: {health_status}</strong>
+            <p>Based on the analysis of {st.session_state.processed_media_count} files, your media library is in {health_status.lower()} condition.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Export option
+        if st.button("Export Analysis Report"):
+            st.success("Analysis report would be exported (functionality simulated)")
+            # In a real implementation, this would generate and download a PDF or CSV
 
 # Main app execution
 if __name__ == "__main__":
