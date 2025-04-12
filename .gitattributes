@@ -1,5 +1,0 @@
-env/Lib/site-packages/PyQt5/Qt5/bin/Qt5WebEngineCore.dll filter=lfs diff=lfs merge=lfs -text
-env/Lib/site-packages/clang/native/libclang.dll filter=lfs diff=lfs merge=lfs -text
-env/Lib/site-packages/clicknium/.lib/automation/OpenCvSharpExtern.dll filter=lfs diff=lfs merge=lfs -text
-env/Lib/site-packages/playwright/driver/node.exe filter=lfs diff=lfs merge=lfs -text
-env/Lib/site-packages/tensorflow/python/_pywrap_tensorflow_internal.pyd filter=lfs diff=lfs merge=lfs -text
