@@ -63,14 +63,12 @@ def create_hardware_metrics_chart(data):
         title='Hardware Performance Metrics Over Time',
         xaxis=dict(title='Time'),
         yaxis=dict(
-            title='Usage (%)',
-            titlefont=dict(color='#0747A6'),
+            title=dict(text='Usage (%)', font=dict(color='#0747A6')),
             tickfont=dict(color='#0747A6'),
             range=[0, 100]
         ),
         yaxis2=dict(
-            title='Latency (ms)',
-            titlefont=dict(color='#FF5630'),
+            title=dict(text='Latency (ms)', font=dict(color='#FF5630')),
             tickfont=dict(color='#FF5630'),
             anchor='x',
             overlaying='y',
@@ -136,7 +134,7 @@ def create_media_quality_chart(data):
     fig.update_layout(
         title='Media Quality Metrics Over Time',
         xaxis=dict(title='Time'),
-        yaxis=dict(title='Count per minute'),
+        yaxis=dict(title=dict(text='Count per minute')),
         legend=dict(
             orientation='h',
             yanchor='bottom',

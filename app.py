@@ -5,8 +5,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import time
-from data_generator import generate_metrics_data, generate_media_quality_data
+import json
+from data_generator import generate_metrics_data, generate_media_quality_data, generate_system_event_data
 from anomaly_detection import detect_anomalies, train_isolation_forest, train_autoencoder
+from predictive_maintenance import PredictiveMaintenanceModel, forecast_metrics, analyze_system_health_trends
 from visualization import (
     create_hardware_metrics_chart, 
     create_media_quality_chart,
@@ -42,17 +44,47 @@ if 'anomalies' not in st.session_state:
     
 if 'alert_history' not in st.session_state:
     st.session_state.alert_history = pd.DataFrame(columns=['timestamp', 'metric', 'value', 'threshold', 'severity'])
+
+if 'system_events' not in st.session_state:
+    st.session_state.system_events = pd.DataFrame()
+    
+if 'hardware_forecast' not in st.session_state:
+    st.session_state.hardware_forecast = pd.DataFrame()
+    
+if 'media_forecast' not in st.session_state:
+    st.session_state.media_forecast = pd.DataFrame()
+
+if 'health_trend_analysis' not in st.session_state:
+    st.session_state.health_trend_analysis = {
+        'overall_trend': 'Insufficient data',
+        'metrics_trends': {},
+        'recommendations': ['Collect more data for trend analysis']
+    }
+    
+if 'predictive_model' not in st.session_state:
+    st.session_state.predictive_model = PredictiveMaintenanceModel()
+    st.session_state.failure_probability = 0
+    st.session_state.time_to_failure = None
+    st.session_state.critical_metrics = []
+    st.session_state.preventive_actions = []
     
 if 'refresh_rate' not in st.session_state:
     st.session_state.refresh_rate = 5  # default refresh rate in seconds
 
+if 'use_realistic_data' not in st.session_state:
+    st.session_state.use_realistic_data = True
+
 if 'dark_mode' not in st.session_state:
     st.session_state.dark_mode = False
+
+if 'show_forecast' not in st.session_state:
+    st.session_state.show_forecast = False
 
 if 'anomaly_models_trained' not in st.session_state:
     st.session_state.anomaly_models_trained = False
     st.session_state.isolation_forest = None
     st.session_state.autoencoder = None
+    st.session_state.predictive_model_trained = False
 
 if 'thresholds' not in st.session_state:
     st.session_state.thresholds = {
