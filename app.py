@@ -18,6 +18,20 @@ from visualization import (
 )
 from utils import get_alert_status, get_status_color, calculate_system_health
 
+# Helper function to safely concatenate DataFrames and avoid deprecation warnings
+def safe_concat(df1, df2):
+    """
+    Safely concatenate two DataFrames while avoiding deprecation warnings.
+    
+    Args:
+        df1 (pandas.DataFrame): First DataFrame
+        df2 (pandas.DataFrame): Second DataFrame
+        
+    Returns:
+        pandas.DataFrame: Concatenated DataFrame
+    """
+    return pd.concat([df1, df2], ignore_index=True, copy=False)
+
 # Page configuration
 st.set_page_config(
     page_title="Media Processing Predictive Maintenance",
@@ -274,7 +288,7 @@ def update_dashboard():
         if st.session_state.system_events.empty:
             st.session_state.system_events = new_events
         else:
-            st.session_state.system_events = pd.concat([st.session_state.system_events, new_events])
+            st.session_state.system_events = safe_concat(st.session_state.system_events, new_events)
             # Keep only the most recent 50 events
             if len(st.session_state.system_events) > 50:
                 st.session_state.system_events = st.session_state.system_events.iloc[-50:]
@@ -283,7 +297,7 @@ def update_dashboard():
     if st.session_state.hardware_metrics.empty:
         st.session_state.hardware_metrics = new_hardware_data
     else:
-        st.session_state.hardware_metrics = pd.concat([st.session_state.hardware_metrics, new_hardware_data])
+        st.session_state.hardware_metrics = safe_concat(st.session_state.hardware_metrics, new_hardware_data)
         # Keep only the last 100 data points for display
         if len(st.session_state.hardware_metrics) > 100:
             st.session_state.hardware_metrics = st.session_state.hardware_metrics.iloc[-100:]
@@ -291,7 +305,7 @@ def update_dashboard():
     if st.session_state.media_quality_metrics.empty:
         st.session_state.media_quality_metrics = new_media_data
     else:
-        st.session_state.media_quality_metrics = pd.concat([st.session_state.media_quality_metrics, new_media_data])
+        st.session_state.media_quality_metrics = safe_concat(st.session_state.media_quality_metrics, new_media_data)
         # Keep only the last 100 data points for display
         if len(st.session_state.media_quality_metrics) > 100:
             st.session_state.media_quality_metrics = st.session_state.media_quality_metrics.iloc[-100:]
@@ -339,7 +353,7 @@ def update_dashboard():
                     if st.session_state.anomalies.empty:
                         st.session_state.anomalies = anomalies
                     else:
-                        st.session_state.anomalies = pd.concat([st.session_state.anomalies, anomalies])
+                        st.session_state.anomalies = safe_concat(st.session_state.anomalies, anomalies)
                         # Keep only the last 50 anomalies
                         if len(st.session_state.anomalies) > 50:
                             st.session_state.anomalies = st.session_state.anomalies.iloc[-50:]
@@ -358,7 +372,7 @@ def update_dashboard():
                 'threshold': [st.session_state.thresholds['cpu_usage']],
                 'severity': [severity]
             })
-            st.session_state.alert_history = pd.concat([st.session_state.alert_history, new_alert])
+            st.session_state.alert_history = safe_concat(st.session_state.alert_history, new_alert)
         
         # GPU alert
         if latest_hw['gpu_usage'] > st.session_state.thresholds['gpu_usage']:
@@ -370,7 +384,7 @@ def update_dashboard():
                 'threshold': [st.session_state.thresholds['gpu_usage']],
                 'severity': [severity]
             })
-            st.session_state.alert_history = pd.concat([st.session_state.alert_history, new_alert])
+            st.session_state.alert_history = safe_concat(st.session_state.alert_history, new_alert)
         
         # Memory alert
         if latest_hw['memory_usage'] > st.session_state.thresholds['memory_usage']:
@@ -382,7 +396,7 @@ def update_dashboard():
                 'threshold': [st.session_state.thresholds['memory_usage']],
                 'severity': [severity]
             })
-            st.session_state.alert_history = pd.concat([st.session_state.alert_history, new_alert])
+            st.session_state.alert_history = safe_concat(st.session_state.alert_history, new_alert)
         
         # Latency alert
         if latest_hw['latency'] > st.session_state.thresholds['latency']:
@@ -394,7 +408,7 @@ def update_dashboard():
                 'threshold': [st.session_state.thresholds['latency']],
                 'severity': [severity]
             })
-            st.session_state.alert_history = pd.concat([st.session_state.alert_history, new_alert])
+            st.session_state.alert_history = safe_concat(st.session_state.alert_history, new_alert)
     
     if not new_media_data.empty:
         latest_media = new_media_data.iloc[-1]
@@ -409,7 +423,7 @@ def update_dashboard():
                 'threshold': [st.session_state.thresholds['frame_drops']],
                 'severity': [severity]
             })
-            st.session_state.alert_history = pd.concat([st.session_state.alert_history, new_alert])
+            st.session_state.alert_history = safe_concat(st.session_state.alert_history, new_alert)
         
         # Encoding errors alert
         if latest_media['encoding_errors'] > st.session_state.thresholds['encoding_errors']:
@@ -421,7 +435,7 @@ def update_dashboard():
                 'threshold': [st.session_state.thresholds['encoding_errors']],
                 'severity': [severity]
             })
-            st.session_state.alert_history = pd.concat([st.session_state.alert_history, new_alert])
+            st.session_state.alert_history = safe_concat(st.session_state.alert_history, new_alert)
         
         # Resolution changes alert
         if latest_media['resolution_changes'] > st.session_state.thresholds['resolution_changes']:
@@ -433,7 +447,7 @@ def update_dashboard():
                 'threshold': [st.session_state.thresholds['resolution_changes']],
                 'severity': [severity]
             })
-            st.session_state.alert_history = pd.concat([st.session_state.alert_history, new_alert])
+            st.session_state.alert_history = safe_concat(st.session_state.alert_history, new_alert)
     
     # Keep only the most recent 100 alerts
     if len(st.session_state.alert_history) > 100:
