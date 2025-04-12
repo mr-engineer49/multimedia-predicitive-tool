@@ -111,6 +111,21 @@ with st.sidebar:
         value=st.session_state.refresh_rate
     )
     
+    # Data generation options
+    st.subheader("Data Generation")
+    
+    # Toggle for realistic data patterns
+    if st.toggle("Realistic Data Patterns", st.session_state.use_realistic_data):
+        st.session_state.use_realistic_data = True
+    else:
+        st.session_state.use_realistic_data = False
+    
+    # Toggle for forecast display
+    if st.toggle("Show Forecast", st.session_state.show_forecast):
+        st.session_state.show_forecast = True
+    else:
+        st.session_state.show_forecast = False
+    
     # Toggle for dark/light mode
     if st.toggle("Dark Mode", st.session_state.dark_mode):
         st.session_state.dark_mode = True
@@ -130,6 +145,25 @@ with st.sidebar:
         st.session_state.thresholds['encoding_errors'] = st.slider("Encoding Errors (per min)", 0, 30, st.session_state.thresholds['encoding_errors'])
         st.session_state.thresholds['resolution_changes'] = st.slider("Resolution Changes (per min)", 0, 10, st.session_state.thresholds['resolution_changes'])
     
+    # Advanced settings
+    with st.expander("Advanced Settings"):
+        # Generate test anomaly
+        if st.button("Generate Test Stress Event"):
+            # Set stress mode to true in data generator patterns
+            from data_generator import _pattern_state
+            _pattern_state['stress_mode'] = True
+            _pattern_state['stress_timer'] = _pattern_state['stress_duration']
+            st.success("Stress event initiated - system load will increase temporarily")
+        
+        # Clear all data
+        if st.button("Clear All Data"):
+            for key in ['hardware_metrics', 'media_quality_metrics', 'anomalies', 'alert_history', 'system_events']:
+                if key in st.session_state:
+                    st.session_state[key] = pd.DataFrame()
+            st.session_state.anomaly_models_trained = False
+            st.session_state.predictive_model_trained = False
+            st.success("All data has been cleared")
+    
     st.subheader("About")
     st.markdown("""
         This predictive maintenance system monitors multimedia processing workflows,
@@ -139,67 +173,110 @@ with st.sidebar:
     # System information
     st.subheader("System Information")
     st.markdown("**Environment:** Production")
-    st.markdown("**Version:** 1.0.0")
+    st.markdown("**Version:** 1.1.0")
     st.markdown("**Last Update:** {}".format(datetime.now().strftime("%Y-%m-%d")))
 
-# Main dashboard layout
-# Create three columns for the top metrics
-col1, col2, col3 = st.columns(3)
+# Main dashboard layout with tabs
+tab1, tab2 = st.tabs(["📊 Real-time Monitoring", "📈 Predictive Analysis"])
 
-with col1:
-    st.subheader("💻 System CPU")
-    cpu_gauge = st.empty()
+# Tab 1: Real-time monitoring dashboard
+with tab1:
+    # Create three columns for the top metrics
+    col1, col2, col3 = st.columns(3)
 
-with col2:
-    st.subheader("🎮 GPU Status")
-    gpu_gauge = st.empty()
+    with col1:
+        st.subheader("💻 System CPU")
+        cpu_gauge = st.empty()
 
-with col3:
-    st.subheader("🧠 Memory Utilization")
-    memory_gauge = st.empty()
+    with col2:
+        st.subheader("🎮 GPU Status")
+        gpu_gauge = st.empty()
 
-# Hardware metrics section
-st.header("Hardware Performance Metrics")
-hardware_metrics_container = st.container()
-with hardware_metrics_container:
-    hardware_chart_placeholder = st.empty()
-    hardware_metrics_cols = st.columns(4)
-    cpu_metric = hardware_metrics_cols[0].empty()
-    gpu_metric = hardware_metrics_cols[1].empty()
-    memory_metric = hardware_metrics_cols[2].empty()
-    latency_metric = hardware_metrics_cols[3].empty()
+    with col3:
+        st.subheader("🧠 Memory Utilization")
+        memory_gauge = st.empty()
 
-# Media quality metrics section
-st.header("Media Processing Quality")
-media_quality_container = st.container()
-with media_quality_container:
-    media_chart_placeholder = st.empty()
-    media_cols = st.columns(3)
-    frame_drops_metric = media_cols[0].empty()
-    encoding_errors_metric = media_cols[1].empty()
-    resolution_changes_metric = media_cols[2].empty()
+    # Hardware metrics section
+    st.header("Hardware Performance Metrics")
+    hardware_metrics_container = st.container()
+    with hardware_metrics_container:
+        hardware_chart_placeholder = st.empty()
+        hardware_metrics_cols = st.columns(4)
+        cpu_metric = hardware_metrics_cols[0].empty()
+        gpu_metric = hardware_metrics_cols[1].empty()
+        memory_metric = hardware_metrics_cols[2].empty()
+        latency_metric = hardware_metrics_cols[3].empty()
 
-# Anomaly detection section
-st.header("Anomaly Detection & Predictive Maintenance")
-anomaly_container = st.container()
-with anomaly_container:
-    anomaly_cols = st.columns([2, 1])
-    with anomaly_cols[0]:
-        anomaly_chart_placeholder = st.empty()
-    with anomaly_cols[1]:
-        system_health_placeholder = st.empty()
-        predicted_failures_placeholder = st.empty()
+    # Media quality metrics section
+    st.header("Media Processing Quality")
+    media_quality_container = st.container()
+    with media_quality_container:
+        media_chart_placeholder = st.empty()
+        media_cols = st.columns(3)
+        frame_drops_metric = media_cols[0].empty()
+        encoding_errors_metric = media_cols[1].empty()
+        resolution_changes_metric = media_cols[2].empty()
 
-# Alerts section
-st.header("⚠️ System Alerts")
-alerts_container = st.container()
-alerts_placeholder = st.empty()
+    # Anomaly detection section
+    st.header("Anomaly Detection & System Health")
+    anomaly_container = st.container()
+    with anomaly_container:
+        anomaly_cols = st.columns([2, 1])
+        with anomaly_cols[0]:
+            anomaly_chart_placeholder = st.empty()
+        with anomaly_cols[1]:
+            system_health_placeholder = st.empty()
+            predicted_failures_placeholder = st.empty()
+
+    # Alerts section
+    st.header("⚠️ System Alerts")
+    alerts_container = st.container()
+    alerts_placeholder = st.empty()
+
+# Tab 2: Predictive Analysis & Forecasting
+with tab2:
+    st.header("🔮 Predictive Maintenance & Forecasting")
+    
+    # System health trend analysis
+    st.subheader("System Health Trend Analysis")
+    trend_cols = st.columns([2, 1])
+    
+    with trend_cols[0]:
+        trend_chart_placeholder = st.empty()
+        
+    with trend_cols[1]:
+        trend_analysis_placeholder = st.empty()
+    
+    # Forecast metrics
+    st.subheader("Forecasted Metrics")
+    forecast_container = st.container()
+    with forecast_container:
+        forecast_chart_placeholder = st.empty()
+        
+    # Preventive actions
+    st.subheader("Recommended Preventive Actions")
+    preventive_actions_placeholder = st.empty()
+    
+    # System events log
+    st.header("🔄 System Events Log")
+    events_placeholder = st.empty()
 
 # Function to update dashboard metrics
 def update_dashboard():
-    # Generate real-time data
-    new_hardware_data = generate_metrics_data()
-    new_media_data = generate_media_quality_data()
+    # Generate real-time data using the realistic mode setting
+    new_hardware_data = generate_metrics_data(realistic_mode=st.session_state.use_realistic_data)
+    new_media_data = generate_media_quality_data(realistic_mode=st.session_state.use_realistic_data)
+    
+    # Occasionally generate system events
+    if np.random.random() < 0.05:  # 5% chance each update
+        new_events = generate_system_event_data(num_points=1)
+        if st.session_state.system_events.empty:
+            st.session_state.system_events = new_events
+        else:
+            st.session_state.system_events = pd.concat([st.session_state.system_events, new_events])
+            # Keep only the most recent 50 events
+            if len(st.session_state.system_events) > 50:
+                st.session_state.system_events = st.session_state.system_events.iloc[-50:]
     
     # Update session state with new data
     if st.session_state.hardware_metrics.empty:
@@ -365,26 +442,30 @@ def update_dashboard():
     if not st.session_state.hardware_metrics.empty:
         latest_hw = st.session_state.hardware_metrics.iloc[-1]
         
-        # Update gauges
+        # Update gauges with unique keys
         cpu_gauge.plotly_chart(
             create_system_health_gauge("CPU Usage", latest_hw['cpu_usage'], st.session_state.thresholds['cpu_usage']),
-            use_container_width=True
+            use_container_width=True,
+            key="cpu_gauge"
         )
         
         gpu_gauge.plotly_chart(
             create_system_health_gauge("GPU Usage", latest_hw['gpu_usage'], st.session_state.thresholds['gpu_usage']),
-            use_container_width=True
+            use_container_width=True,
+            key="gpu_gauge"
         )
         
         memory_gauge.plotly_chart(
             create_system_health_gauge("Memory Usage", latest_hw['memory_usage'], st.session_state.thresholds['memory_usage']),
-            use_container_width=True
+            use_container_width=True,
+            key="memory_gauge"
         )
         
-        # Update hardware metrics
+        # Update hardware metrics with unique key
         hardware_chart_placeholder.plotly_chart(
             create_hardware_metrics_chart(st.session_state.hardware_metrics),
-            use_container_width=True
+            use_container_width=True,
+            key="hardware_chart"
         )
         
         cpu_status = get_alert_status(latest_hw['cpu_usage'], st.session_state.thresholds['cpu_usage'])
@@ -400,10 +481,11 @@ def update_dashboard():
     if not st.session_state.media_quality_metrics.empty:
         latest_media = st.session_state.media_quality_metrics.iloc[-1]
         
-        # Update media quality chart
+        # Update media quality chart with unique key
         media_chart_placeholder.plotly_chart(
             create_media_quality_chart(st.session_state.media_quality_metrics),
-            use_container_width=True
+            use_container_width=True,
+            key="media_quality_chart"
         )
         
         frame_drops_status = get_alert_status(latest_media['frame_drops'], st.session_state.thresholds['frame_drops'])
@@ -418,8 +500,108 @@ def update_dashboard():
     if not st.session_state.anomalies.empty:
         anomaly_chart_placeholder.plotly_chart(
             create_anomaly_heatmap(st.session_state.anomalies),
-            use_container_width=True
+            use_container_width=True,
+            key="anomaly_heatmap"
         )
+        
+        # Update the predictive analysis tab
+        if not st.session_state.preventive_actions:
+            preventive_actions_placeholder.info("Not enough data for predictive maintenance recommendations yet. Continue collecting data.")
+        else:
+            preventive_actions_placeholder.markdown("### Recommended Actions")
+            for i, action in enumerate(st.session_state.preventive_actions):
+                preventive_actions_placeholder.markdown(f"{i+1}. {action}")
+        
+        # Display system events
+        if not st.session_state.system_events.empty:
+            with events_placeholder.container():
+                st.write("Recent System Events:")
+                
+                # Display the 20 most recent events
+                recent_events = st.session_state.system_events.sort_values('timestamp', ascending=False).head(20)
+                
+                for _, event in recent_events.iterrows():
+                    severity = event['severity']
+                    event_color = get_status_color(severity)
+                    st.markdown(
+                        f"""
+                        <div style="padding: 10px; border-left: 5px solid {event_color}; margin-bottom: 10px;">
+                            <strong>{event['event_type']}</strong> ({event['component']}) - {event['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}
+                            <br/>
+                            <span>{event['message']}</span>
+                            <br/>
+                            <small style="color: #666;">{event['details']}</small>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+        else:
+            events_placeholder.info("No system events recorded yet.")
+            
+        # Display forecast data if available and requested
+        if st.session_state.show_forecast and not st.session_state.hardware_forecast.empty:
+            import plotly.graph_objects as go
+            
+            # Create a figure for the forecast chart
+            fig = go.Figure()
+            
+            # Add actual CPU data
+            fig.add_trace(
+                go.Scatter(
+                    x=st.session_state.hardware_metrics['timestamp'],
+                    y=st.session_state.hardware_metrics['cpu_usage'],
+                    name='Actual CPU',
+                    line=dict(color='#0747A6', width=2)
+                )
+            )
+            
+            # Add forecasted CPU data
+            fig.add_trace(
+                go.Scatter(
+                    x=st.session_state.hardware_forecast['timestamp'],
+                    y=st.session_state.hardware_forecast['cpu_usage'],
+                    name='Forecast CPU',
+                    line=dict(color='#0747A6', width=2, dash='dash')
+                )
+            )
+            
+            # Update layout
+            fig.update_layout(
+                title='CPU Usage Forecast',
+                xaxis=dict(title='Time'),
+                yaxis=dict(title=dict(text='Usage (%)')),
+                legend=dict(
+                    orientation='h',
+                    yanchor='bottom',
+                    y=1.02,
+                    xanchor='right',
+                    x=1
+                ),
+                margin=dict(l=20, r=20, t=40, b=20),
+                height=350
+            )
+            
+            # Display the forecast chart
+            forecast_chart_placeholder.plotly_chart(
+                fig,
+                use_container_width=True,
+                key="forecast_chart"
+            )
+            
+            # Display trend analysis if available
+            if st.session_state.health_trend_analysis and 'overall_trend' in st.session_state.health_trend_analysis:
+                trend_analysis = st.session_state.health_trend_analysis
+                
+                trend_analysis_placeholder.markdown(f"### System Health Trend: **{trend_analysis['overall_trend']}**")
+                
+                if 'recommendations' in trend_analysis and trend_analysis['recommendations']:
+                    trend_analysis_placeholder.markdown("#### Recommendations:")
+                    for rec in trend_analysis['recommendations']:
+                        trend_analysis_placeholder.markdown(f"- {rec}")
+        
+        elif st.session_state.show_forecast:
+            forecast_chart_placeholder.info("Not enough data for forecasting yet. Continue collecting data.")
+            trend_analysis_placeholder.info("Health trend analysis will be available once more data is collected.")
         
         # Calculate system health score
         system_health = calculate_system_health(
@@ -431,8 +613,52 @@ def update_dashboard():
         
         system_health_placeholder.plotly_chart(
             create_system_health_gauge("System Health", system_health, 60, min_value=0, max_value=100),
-            use_container_width=True
+            use_container_width=True,
+            key="system_health_gauge"
         )
+        
+        # Train and use predictive maintenance model if enough data is available
+        if len(st.session_state.hardware_metrics) > 30 and not st.session_state.predictive_model_trained:
+            # Train the predictive model
+            training_success = st.session_state.predictive_model.train(
+                st.session_state.hardware_metrics,
+                st.session_state.media_quality_metrics
+            )
+            if training_success:
+                st.session_state.predictive_model_trained = True
+        
+        # If the model is trained, analyze system health and predict failures
+        if st.session_state.predictive_model_trained:
+            # Analyze failure risk
+            risk_analysis = st.session_state.predictive_model.analyze_failure_risk(
+                st.session_state.hardware_metrics,
+                st.session_state.media_quality_metrics,
+                st.session_state.thresholds
+            )
+            
+            # Update session state with results
+            st.session_state.failure_probability = risk_analysis['failure_probability']
+            st.session_state.time_to_failure = risk_analysis['time_to_failure']
+            st.session_state.critical_metrics = risk_analysis['critical_metrics']
+            
+            # Get preventive actions
+            st.session_state.preventive_actions = st.session_state.predictive_model.get_preventive_actions()
+            
+            # Generate forecasts if requested
+            if st.session_state.show_forecast and len(st.session_state.hardware_metrics) > 30:
+                st.session_state.hardware_forecast, st.session_state.media_forecast = forecast_metrics(
+                    st.session_state.hardware_metrics,
+                    st.session_state.media_quality_metrics,
+                    forecast_periods=10
+                )
+                
+                # Update health trend analysis
+                st.session_state.health_trend_analysis = analyze_system_health_trends(
+                    st.session_state.hardware_metrics,
+                    st.session_state.media_quality_metrics,
+                    st.session_state.thresholds,
+                    window=min(30, len(st.session_state.hardware_metrics))
+                )
         
         # Predicted failures
         recent_anomalies = st.session_state.anomalies.iloc[-5:] if len(st.session_state.anomalies) >= 5 else st.session_state.anomalies
