@@ -442,30 +442,34 @@ def update_dashboard():
     if not st.session_state.hardware_metrics.empty:
         latest_hw = st.session_state.hardware_metrics.iloc[-1]
         
-        # Update gauges with unique keys
+        # Make keys unique using a random suffix
+        import random
+        rand_key = random.randint(1, 100000)
+        
+        # Update gauges with completely unique keys
         cpu_gauge.plotly_chart(
             create_system_health_gauge("CPU Usage", latest_hw['cpu_usage'], st.session_state.thresholds['cpu_usage']),
             use_container_width=True,
-            key="cpu_gauge"
+            key=f"cpu_gauge_{rand_key}"
         )
         
         gpu_gauge.plotly_chart(
             create_system_health_gauge("GPU Usage", latest_hw['gpu_usage'], st.session_state.thresholds['gpu_usage']),
             use_container_width=True,
-            key="gpu_gauge"
+            key=f"gpu_gauge_{rand_key}"
         )
         
         memory_gauge.plotly_chart(
             create_system_health_gauge("Memory Usage", latest_hw['memory_usage'], st.session_state.thresholds['memory_usage']),
             use_container_width=True,
-            key="memory_gauge"
+            key=f"memory_gauge_{rand_key}"
         )
         
         # Update hardware metrics with unique key
         hardware_chart_placeholder.plotly_chart(
             create_hardware_metrics_chart(st.session_state.hardware_metrics),
             use_container_width=True,
-            key="hardware_chart"
+            key=f"hardware_chart_{rand_key}"
         )
         
         cpu_status = get_alert_status(latest_hw['cpu_usage'], st.session_state.thresholds['cpu_usage'])
@@ -481,11 +485,14 @@ def update_dashboard():
     if not st.session_state.media_quality_metrics.empty:
         latest_media = st.session_state.media_quality_metrics.iloc[-1]
         
+        # Make a new random key for this section
+        rand_key2 = random.randint(100001, 200000)
+        
         # Update media quality chart with unique key
         media_chart_placeholder.plotly_chart(
             create_media_quality_chart(st.session_state.media_quality_metrics),
             use_container_width=True,
-            key="media_quality_chart"
+            key=f"media_quality_chart_{rand_key2}"
         )
         
         frame_drops_status = get_alert_status(latest_media['frame_drops'], st.session_state.thresholds['frame_drops'])
@@ -498,10 +505,13 @@ def update_dashboard():
     
     # Update anomaly visualizations
     if not st.session_state.anomalies.empty:
+        # Make a new random key for anomaly section
+        rand_key3 = random.randint(200001, 300000)
+        
         anomaly_chart_placeholder.plotly_chart(
             create_anomaly_heatmap(st.session_state.anomalies),
             use_container_width=True,
-            key="anomaly_heatmap"
+            key=f"anomaly_heatmap_{rand_key3}"
         )
         
         # Update the predictive analysis tab
@@ -708,20 +718,18 @@ def update_dashboard():
 
 # Main app execution
 if __name__ == "__main__":
-    # Initial update
+    # Auto-refresh configuration using a button instead of automatic updates
+    refresh_col1, refresh_col2 = st.columns([3, 1])
+    with refresh_col2:
+        if st.button("🔄 Refresh Dashboard", key="refresh_button"):
+            st.session_state.last_refresh = time.time()
+            st.rerun()
+    
+    with refresh_col1:
+        last_refresh_time = datetime.now().strftime("%H:%M:%S")
+        if 'last_refresh' in st.session_state:
+            last_refresh_time = datetime.fromtimestamp(st.session_state.last_refresh).strftime("%H:%M:%S")
+        st.info(f"Last updated: {last_refresh_time}")
+    
+    # Only run the dashboard update once per page load
     update_dashboard()
-    
-    # Use a placeholder for the auto-refresh message
-    refresh_placeholder = st.empty()
-    
-    # Create auto-refresh loop
-    while True:
-        # Calculate time until next refresh
-        countdown = st.session_state.refresh_rate
-        while countdown > 0:
-            refresh_placeholder.info(f"Dashboard will refresh in {countdown} seconds")
-            time.sleep(1)
-            countdown -= 1
-        
-        refresh_placeholder.info("Refreshing dashboard...")
-        update_dashboard()
