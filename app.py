@@ -338,6 +338,7 @@ with tab2:
             trend_chart_placeholder.info("Collecting data for trend analysis...")
         
     with trend_cols[1]:
+        trend_analysis_placeholder = st.empty()
         if 'health_trend_analysis' in st.session_state and st.session_state.health_trend_analysis:
             trend_analysis = st.session_state.health_trend_analysis
             
@@ -362,6 +363,7 @@ with tab2:
     st.subheader("Forecasted Metrics")
     forecast_container = st.container()
     with forecast_container:
+        forecast_chart_placeholder = st.empty()
         if st.session_state.hardware_forecast.empty:
             # Generate some forecast data if not available
             current_time = datetime.now()
@@ -543,6 +545,7 @@ with tab2:
         
     # Preventive actions
     st.subheader("Recommended Preventive Actions")
+    preventive_actions_placeholder = st.empty()
     if not st.session_state.preventive_actions:
         # Default recommendations if none available
         preventive_actions_placeholder.markdown("### Suggested Actions:")
@@ -558,6 +561,7 @@ with tab2:
     
     # System events log
     st.header("🔄 System Events Log")
+    events_placeholder = st.empty()
     if st.session_state.system_events.empty:
         # Add some default events if none exist
         default_events = [
