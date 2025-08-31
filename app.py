@@ -30,7 +30,14 @@ def safe_concat(df1, df2):
     Returns:
         pandas.DataFrame: Concatenated DataFrame
     """
-    return pd.concat([df1, df2], ignore_index=True, copy=False)
+    if df1.empty and df2.empty:
+        return pd.DataFrame()
+    elif df1.empty:
+        return df2.copy()
+    elif df2.empty:
+        return df1.copy()
+    else:
+        return pd.concat([df1, df2], ignore_index=True, copy=False)
 
 # Page configuration
 st.set_page_config(
@@ -58,7 +65,7 @@ if 'anomalies' not in st.session_state:
     st.session_state.anomalies = pd.DataFrame()
     
 if 'alert_history' not in st.session_state:
-    st.session_state.alert_history = pd.DataFrame(columns=['timestamp', 'metric', 'value', 'threshold', 'severity'])
+    st.session_state.alert_history = pd.DataFrame()
 
 if 'system_events' not in st.session_state:
     st.session_state.system_events = pd.DataFrame()

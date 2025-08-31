@@ -1,11 +1,13 @@
-modules = ["python-3.11"]
+modules = ["python-3.11", "nix"]
+run = "python3 manage.py runserver 0.0.0.0:3000"
 
 [nix]
-channel = "stable-24_05"
+channel = "stable-25_05"
+packages = ["SDL2", "SDL2_image", "SDL2_mixer", "SDL2_ttf", "arrow-cpp", "c-ares", "cacert", "cairo", "cargo", "coreutils", "dotnet-sdk", "ffmpeg-full", "fontconfig", "freetype", "geckodriver", "ghostscript", "gitFull", "glibcLocales", "gobject-introspection", "grpc", "gtk3", "hdf5", "lcms2", "libGL", "libGLU", "libffi", "libiconv", "libimagequant", "libjpeg", "libmysqlclient", "libpng", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssh", "openssl", "pgadmin4", "pkg-config", "playwright-driver", "portmidi", "pre-commit", "qhull", "rustc", "tcl", "tk", "xcodebuild", "xsimd", "zlib"]
 
 [deployment]
 deploymentTarget = "autoscale"
-run = ["streamlit", "run", "app.py"]
+run = ["streamlit", "run", "app.py", "--server.port", "5000"]
 
 [workflows]
 runButton = "Project"
@@ -25,13 +27,11 @@ author = "agent"
 
 [workflows.workflow.metadata]
 agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
+outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "streamlit run app.py --server.port 5000"
+args = "streamlit run app.py --server.address 0.0.0.0 --server.port 5000 --server.headless true"
 waitForPort = 5000
 
 [[ports]]
