@@ -21,6 +21,80 @@ from utils.system_monitor import SystemMonitor, PredictiveHealthAnalyzer
 from utils.csv_analyzer import CSVPredictiveAnalyzer
 from utils.multimedia_analyzer import MultimediaAnalyzer
 
+# Simulation data generation function
+def generate_simulation_data(equipment_type, days, include_failures=True):
+    """Generate realistic equipment data for predictive maintenance simulation"""
+    import random
+    from datetime import datetime, timedelta
+    
+    # Create timestamp range
+    start_date = datetime.now() - timedelta(days=days)
+    timestamps = []
+    for i in range(days * 24):  # Hourly data
+        timestamps.append(start_date + timedelta(hours=i))
+    
+    data = {'timestamp': timestamps}
+    
+    # Generate data based on equipment type
+    np.random.seed(42)  # For reproducible data
+    n_points = len(timestamps)
+    
+    if equipment_type == "Industrial Pump":
+        data['pressure_psi'] = 100 + np.random.normal(0, 5, n_points) + np.sin(np.arange(n_points) * 0.1) * 10
+        data['flow_rate_gpm'] = 50 + np.random.normal(0, 3, n_points) + np.cos(np.arange(n_points) * 0.05) * 5
+        data['temperature_f'] = 180 + np.random.normal(0, 8, n_points)
+        data['vibration_mm_s'] = 2 + np.random.exponential(1, n_points)
+        data['power_consumption_kw'] = 15 + np.random.normal(0, 2, n_points)
+        
+    elif equipment_type == "HVAC System":
+        data['supply_temp_f'] = 55 + np.random.normal(0, 3, n_points)
+        data['return_temp_f'] = 75 + np.random.normal(0, 4, n_points)
+        data['airflow_cfm'] = 1200 + np.random.normal(0, 50, n_points)
+        data['humidity_percent'] = 45 + np.random.normal(0, 5, n_points)
+        data['energy_consumption_kw'] = 25 + np.random.normal(0, 3, n_points)
+        
+    elif equipment_type == "Manufacturing Robot":
+        data['cycle_time_sec'] = 30 + np.random.normal(0, 2, n_points)
+        data['position_accuracy_mm'] = 0.1 + np.random.exponential(0.05, n_points)
+        data['motor_current_a'] = 8 + np.random.normal(0, 1, n_points)
+        data['joint_temperature_c'] = 40 + np.random.normal(0, 5, n_points)
+        data['error_count'] = np.random.poisson(0.5, n_points)
+        
+    elif equipment_type == "Server Farm":
+        data['cpu_usage_percent'] = 65 + np.random.normal(0, 15, n_points)
+        data['memory_usage_percent'] = 70 + np.random.normal(0, 10, n_points)
+        data['disk_io_mbps'] = 100 + np.random.normal(0, 20, n_points)
+        data['network_traffic_mbps'] = 500 + np.random.normal(0, 100, n_points)
+        data['temperature_c'] = 25 + np.random.normal(0, 3, n_points)
+        
+    elif equipment_type == "Generator":
+        data['voltage_v'] = 480 + np.random.normal(0, 5, n_points)
+        data['frequency_hz'] = 60 + np.random.normal(0, 0.1, n_points)
+        data['fuel_consumption_gph'] = 12 + np.random.normal(0, 1, n_points)
+        data['engine_temp_f'] = 190 + np.random.normal(0, 10, n_points)
+        data['oil_pressure_psi'] = 45 + np.random.normal(0, 3, n_points)
+    
+    # Add failure events if requested
+    if include_failures:
+        failure_indicators = np.zeros(n_points)
+        # Introduce random failures (2-5% of data points)
+        failure_indices = np.random.choice(n_points, size=int(n_points * 0.03), replace=False)
+        failure_indicators[failure_indices] = 1
+        
+        # Degrade metrics before failures
+        for idx in failure_indices:
+            if idx > 5:  # Ensure we have some history
+                start_degradation = max(0, idx - 5)
+                for key in data.keys():
+                    if key != 'timestamp' and isinstance(data[key], np.ndarray):
+                        # Add progressive degradation
+                        degradation_factor = np.linspace(1, 1.3, idx - start_degradation)
+                        data[key][start_degradation:idx] *= degradation_factor
+        
+        data['failure_indicator'] = failure_indicators
+    
+    return pd.DataFrame(data)
+
 # Helper function to safely concatenate DataFrames and avoid deprecation warnings
 def safe_concat(df1, df2):
     """
@@ -1124,23 +1198,147 @@ with tab3:
     The system will analyze the content and provide insights into potential quality issues and optimization opportunities.
     """)
     
-    # File upload section
-    st.subheader("Upload Media Content")
-    file_types = ["Image", "Video", "Audio"]
-    selected_type = st.selectbox("Select Media Type", file_types)
+    # Media input options
+    st.subheader("📂 Media Input Options")
     
-    # Display appropriate file uploader based on selection
-    if selected_type == "Image":
-        uploaded_file = st.file_uploader("Upload Image File", type=["jpg", "jpeg", "png", "webp", "bmp"])
-        file_info = "Supported formats: JPG, PNG, WebP, BMP"
-    elif selected_type == "Video":
-        uploaded_file = st.file_uploader("Upload Video File", type=["mp4", "mov", "avi", "mkv"])
-        file_info = "Supported formats: MP4, MOV, AVI, MKV"
-    else:  # Audio
-        uploaded_file = st.file_uploader("Upload Audio File", type=["mp3", "wav", "ogg", "flac"])
-        file_info = "Supported formats: MP3, WAV, OGG, FLAC"
+    media_input_method = st.radio(
+        "Choose your media input method:",
+        ["📁 Upload Media File", "🌐 Load from URL", "🎭 Generate Sample Media"],
+        horizontal=True
+    )
     
-    st.caption(file_info)
+    if media_input_method == "📁 Upload Media File":
+        st.write("**Upload your media files for analysis:**")
+        file_types = ["Image", "Video", "Audio"]
+        selected_type = st.selectbox("Select Media Type", file_types, key="upload_media_type")
+    
+    elif media_input_method == "🌐 Load from URL":
+        st.write("**Load media from a public URL:**")
+        selected_type = st.selectbox("Select Media Type", ["Image", "Video", "Audio"], key="url_media_type")
+        media_url = st.text_input(
+            "Enter Media URL:",
+            placeholder="https://example.com/image.jpg",
+            help="Enter a direct link to a publicly accessible image, video, or audio file"
+        )
+    
+    elif media_input_method == "🎭 Generate Sample Media":
+        st.write("**Generate sample media for testing analysis:**")
+        selected_type = st.selectbox("Select Media Type", ["Image", "Video", "Audio"], key="sample_media_type")
+        
+        if selected_type == "Image":
+            sample_col1, sample_col2 = st.columns(2)
+            with sample_col1:
+                sample_scenario = st.selectbox(
+                    "Sample Scenario:",
+                    ["High Quality Product Photo", "Compressed Web Image", "Low Light Photo", "Overexposed Image", "Blurry Motion Capture"]
+                )
+            with sample_col2:
+                image_resolution = st.selectbox("Resolution:", ["HD (1920x1080)", "4K (3840x2160)", "Mobile (720x1280)", "Thumbnail (300x300)"])
+        
+        elif selected_type == "Video":
+            sample_col1, sample_col2 = st.columns(2)
+            with sample_col1:
+                sample_scenario = st.selectbox(
+                    "Sample Scenario:",
+                    ["High Bitrate Streaming", "Compressed Mobile Video", "Screen Recording", "Gaming Footage", "Security Camera Feed"]
+                )
+            with sample_col2:
+                video_quality = st.selectbox("Quality:", ["1080p 60fps", "4K 30fps", "720p 30fps", "480p 24fps"])
+        
+        else:  # Audio
+            sample_col1, sample_col2 = st.columns(2)
+            with sample_col1:
+                sample_scenario = st.selectbox(
+                    "Sample Scenario:",
+                    ["Studio Recording", "Podcast Audio", "Phone Call Quality", "Music Streaming", "Voice Recognition"]
+                )
+            with sample_col2:
+                audio_quality = st.selectbox("Quality:", ["48kHz 320kbps", "44.1kHz 192kbps", "22kHz 128kbps", "8kHz 64kbps"])
+        
+        if st.button("🎬 Generate Sample Media"):
+            # Generate simulated media analysis
+            file_id = f"sample_{selected_type}_{len(st.session_state.uploaded_media) + 1}"
+            
+            st.session_state.uploaded_media[file_id] = {
+                'type': selected_type,
+                'name': f"Sample_{sample_scenario.replace(' ', '_')}.{selected_type.lower()}",
+                'timestamp': datetime.now(),
+                'content': f"simulated_{selected_type.lower()}_content".encode(),
+                'is_sample': True,
+                'scenario': sample_scenario
+            }
+            
+            # Generate realistic sample analysis results
+            if selected_type == "Image":
+                quality_base = 85 if "High Quality" in sample_scenario else 65 if "Compressed" in sample_scenario else 45
+                results = {
+                    'quality_score': round(np.random.uniform(quality_base-10, quality_base+10), 1),
+                    'resolution': image_resolution.split('(')[1].replace(')', ''),
+                    'format_efficiency': round(np.random.uniform(60, 95), 1),
+                    'compression_level': 3 if "High Quality" in sample_scenario else 8,
+                    'metadata_issues': 0 if "High Quality" in sample_scenario else np.random.randint(1, 3),
+                    'optimization_potential': round(np.random.uniform(10, 40), 1),
+                    'scenario_analysis': f"Sample data for {sample_scenario}"
+                }
+            elif selected_type == "Video":
+                quality_base = 90 if "High Bitrate" in sample_scenario else 55 if "Security Camera" in sample_scenario else 70
+                results = {
+                    'quality_score': round(np.random.uniform(quality_base-10, quality_base+10), 1),
+                    'resolution': video_quality.split()[0],
+                    'frame_rate': int(video_quality.split()[1].replace('fps', '')),
+                    'bitrate': f"{np.random.randint(2, 25)} Mbps",
+                    'codec_efficiency': round(np.random.uniform(50, 95), 1),
+                    'encoding_issues': 0 if "High Bitrate" in sample_scenario else np.random.randint(1, 4),
+                    'optimization_potential': round(np.random.uniform(15, 45), 1),
+                    'scenario_analysis': f"Sample data for {sample_scenario}"
+                }
+            else:  # Audio
+                quality_base = 85 if "Studio Recording" in sample_scenario else 50 if "Phone Call" in sample_scenario else 70
+                results = {
+                    'quality_score': round(np.random.uniform(quality_base-10, quality_base+10), 1),
+                    'sample_rate': audio_quality.split()[0],
+                    'bitrate': audio_quality.split()[1],
+                    'channels': "Stereo" if "Studio" in sample_scenario or "Music" in sample_scenario else "Mono",
+                    'codec_efficiency': round(np.random.uniform(50, 95), 1),
+                    'encoding_issues': 0 if "Studio" in sample_scenario else np.random.randint(1, 3),
+                    'optimization_potential': round(np.random.uniform(10, 35), 1),
+                    'scenario_analysis': f"Sample data for {sample_scenario}"
+                }
+            
+            # Add scenario-specific issues
+            issues = []
+            if "Low Light" in sample_scenario or "Blurry" in sample_scenario:
+                issues.append("Image quality affected by capture conditions")
+            elif "Compressed" in sample_scenario:
+                issues.append("Compression artifacts detected")
+            elif "Security Camera" in sample_scenario:
+                issues.append("Limited by hardware constraints")
+            elif "Phone Call" in sample_scenario:
+                issues.append("Audio quality limited by transmission method")
+            else:
+                issues.append("No significant issues detected for this sample")
+            
+            results['issues'] = issues
+            st.session_state.media_analysis_results[file_id] = results
+            st.session_state.processed_media_count += 1
+            
+            st.success(f"Generated sample {selected_type.lower()} analysis for: {sample_scenario}")
+            st.rerun()
+    
+    # Show uploader if file upload method is selected
+    uploaded_file = None
+    if media_input_method == "📁 Upload Media File":
+        # Display appropriate file uploader based on selection
+        if selected_type == "Image":
+            uploaded_file = st.file_uploader("Upload Image File", type=["jpg", "jpeg", "png", "webp", "bmp"])
+            file_info = "Supported formats: JPG, PNG, WebP, BMP"
+        elif selected_type == "Video":
+            uploaded_file = st.file_uploader("Upload Video File", type=["mp4", "mov", "avi", "mkv"])
+            file_info = "Supported formats: MP4, MOV, AVI, MKV"
+        else:  # Audio
+            uploaded_file = st.file_uploader("Upload Audio File", type=["mp3", "wav", "ogg", "flac"])
+            file_info = "Supported formats: MP3, WAV, OGG, FLAC"
+        
     
     # Analysis options
     st.subheader("Analysis Options")
@@ -1471,19 +1669,74 @@ def initialize_data_if_empty():
 with tab4:
     st.header("📊 CSV Data Analysis for Predictive Maintenance")
     
-    # File upload section
-    st.subheader("Upload Your Data")
-    uploaded_file = st.file_uploader(
-        "Choose a CSV file with your system or equipment data",
-        type="csv",
-        help="Upload CSV files containing timestamps and numeric metrics for analysis"
+    # Data input section
+    st.subheader("📂 Upload Your Data")
+    
+    input_method = st.radio(
+        "Choose your data input method:",
+        ["📄 Upload CSV File", "🌐 Load from URL", "🎲 Use Simulation Data"],
+        horizontal=True
     )
     
-    if uploaded_file is not None:
+    uploaded_file = None
+    csv_data = None
+    
+    if input_method == "📄 Upload CSV File":
+        uploaded_file = st.file_uploader(
+            "Choose a CSV file with your system or equipment data",
+            type="csv",
+            help="Upload CSV files containing timestamps and numeric metrics for analysis"
+        )
+    
+    elif input_method == "🌐 Load from URL":
+        st.write("**Load CSV data from a public URL:**")
+        data_url = st.text_input(
+            "Enter CSV URL:",
+            placeholder="https://example.com/data.csv",
+            help="Enter a direct link to a publicly accessible CSV file"
+        )
+        
+        if data_url:
+            if st.button("📥 Load Data from URL"):
+                try:
+                    with st.spinner("Loading data from URL..."):
+                        csv_data = pd.read_csv(data_url)
+                        st.session_state.csv_data = csv_data
+                        st.success(f"Successfully loaded {len(csv_data)} rows from URL!")
+                except Exception as e:
+                    st.error(f"Error loading data from URL: {str(e)}")
+                    st.info("Please check that the URL is accessible and points to a valid CSV file.")
+    
+    elif input_method == "🎲 Use Simulation Data":
+        st.write("**Generate simulated equipment data for testing:**")
+        
+        sim_col1, sim_col2, sim_col3 = st.columns(3)
+        
+        with sim_col1:
+            equipment_type = st.selectbox(
+                "Equipment Type:",
+                ["Industrial Pump", "HVAC System", "Manufacturing Robot", "Server Farm", "Generator"]
+            )
+        
+        with sim_col2:
+            sim_days = st.number_input("Days of data:", min_value=1, max_value=365, value=30)
+        
+        with sim_col3:
+            include_failures = st.checkbox("Include failure events", value=True)
+        
+        if st.button("🔧 Generate Simulation Data"):
+            with st.spinner("Generating simulation data..."):
+                csv_data = generate_simulation_data(equipment_type, sim_days, include_failures)
+                st.session_state.csv_data = csv_data
+                st.success(f"Generated {len(csv_data)} rows of {equipment_type.lower()} data!")
+    
+    # Process data regardless of source
+    if uploaded_file is not None or csv_data is not None:
         try:
-            # Read the uploaded CSV
-            csv_data = pd.read_csv(uploaded_file)
-            st.session_state.csv_data = csv_data
+            # Read the uploaded CSV if it's a file upload
+            if uploaded_file is not None and csv_data is None:
+                csv_data = pd.read_csv(uploaded_file)
+                st.session_state.csv_data = csv_data
             
             # Show basic info about the uploaded data
             st.success(f"Successfully loaded {len(csv_data)} rows and {len(csv_data.columns)} columns")
