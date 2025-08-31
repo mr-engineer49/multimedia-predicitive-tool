@@ -16,7 +16,10 @@ from visualization import (
     create_system_health_gauge,
     create_anomaly_heatmap
 )
-from utils import get_alert_status, get_status_color, calculate_system_health
+import utils
+from utils.system_monitor import SystemMonitor, PredictiveHealthAnalyzer
+from utils.csv_analyzer import CSVPredictiveAnalyzer
+from utils.multimedia_analyzer import MultimediaAnalyzer
 
 # Helper function to safely concatenate DataFrames and avoid deprecation warnings
 def safe_concat(df1, df2):
@@ -208,8 +211,18 @@ with st.sidebar:
     st.markdown("**Version:** 1.1.0")
     st.markdown("**Last Update:** {}".format(datetime.now().strftime("%Y-%m-%d")))
 
+# Initialize system monitoring and CSV analyzer
+if 'system_monitor' not in st.session_state:
+    st.session_state.system_monitor = SystemMonitor()
+    st.session_state.health_analyzer = PredictiveHealthAnalyzer()
+    st.session_state.csv_analyzer = CSVPredictiveAnalyzer()
+    st.session_state.multimedia_analyzer = MultimediaAnalyzer()
+    st.session_state.real_system_data = pd.DataFrame()
+    st.session_state.csv_data = pd.DataFrame()
+    st.session_state.csv_analysis_results = {}
+
 # Main dashboard layout with tabs
-tab1, tab2, tab3 = st.tabs(["📊 Real-time Monitoring", "📈 Predictive Analysis", "🔍 Media Content Analysis"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Real-time Monitoring", "📈 Predictive Analysis", "🔍 Media Content Analysis", "💾 CSV Data Analysis", "🖥️ System Health Monitor"])
 
 # Tab 1: Real-time monitoring dashboard
 with tab1:
@@ -605,7 +618,7 @@ with tab2:
             
             for _, event in events_df.iterrows():
                 severity = event['severity']
-                event_color = get_status_color(severity)
+                event_color = utils.get_status_color(severity)
                 st.markdown(
                     f"""
                     <div style="padding: 10px; border-left: 5px solid {event_color}; margin-bottom: 10px;">
@@ -627,7 +640,7 @@ with tab2:
             
             for _, event in recent_events.iterrows():
                 severity = event['severity']
-                event_color = get_status_color(severity)
+                event_color = utils.get_status_color(severity)
                 st.markdown(
                     f"""
                     <div style="padding: 10px; border-left: 5px solid {event_color}; margin-bottom: 10px;">
@@ -852,10 +865,10 @@ def update_dashboard():
             key=f"hardware_chart_{rand_key}"
         )
         
-        cpu_status = get_alert_status(latest_hw['cpu_usage'], st.session_state.thresholds['cpu_usage'])
-        gpu_status = get_alert_status(latest_hw['gpu_usage'], st.session_state.thresholds['gpu_usage'])
-        memory_status = get_alert_status(latest_hw['memory_usage'], st.session_state.thresholds['memory_usage'])
-        latency_status = get_alert_status(latest_hw['latency'], st.session_state.thresholds['latency'])
+        cpu_status = utils.get_alert_status(latest_hw['cpu_usage'], st.session_state.thresholds['cpu_usage'])
+        gpu_status = utils.get_alert_status(latest_hw['gpu_usage'], st.session_state.thresholds['gpu_usage'])
+        memory_status = utils.get_alert_status(latest_hw['memory_usage'], st.session_state.thresholds['memory_usage'])
+        latency_status = utils.get_alert_status(latest_hw['latency'], st.session_state.thresholds['latency'])
         
         cpu_metric.metric("CPU Usage", f"{latest_hw['cpu_usage']:.1f}%", delta=f"{latest_hw['cpu_usage'] - latest_hw['cpu_usage_prev']:.1f}%", delta_color="inverse")
         gpu_metric.metric("GPU Usage", f"{latest_hw['gpu_usage']:.1f}%", delta=f"{latest_hw['gpu_usage'] - latest_hw['gpu_usage_prev']:.1f}%", delta_color="inverse")
@@ -875,9 +888,9 @@ def update_dashboard():
             key=f"media_quality_chart_{rand_key2}"
         )
         
-        frame_drops_status = get_alert_status(latest_media['frame_drops'], st.session_state.thresholds['frame_drops'])
-        encoding_errors_status = get_alert_status(latest_media['encoding_errors'], st.session_state.thresholds['encoding_errors'])
-        resolution_changes_status = get_alert_status(latest_media['resolution_changes'], st.session_state.thresholds['resolution_changes'])
+        frame_drops_status = utils.get_alert_status(latest_media['frame_drops'], st.session_state.thresholds['frame_drops'])
+        encoding_errors_status = utils.get_alert_status(latest_media['encoding_errors'], st.session_state.thresholds['encoding_errors'])
+        resolution_changes_status = utils.get_alert_status(latest_media['resolution_changes'], st.session_state.thresholds['resolution_changes'])
         
         frame_drops_metric.metric("Frame Drops", f"{latest_media['frame_drops']}/min", delta=f"{latest_media['frame_drops'] - latest_media['frame_drops_prev']}", delta_color="inverse")
         encoding_errors_metric.metric("Encoding Errors", f"{latest_media['encoding_errors']}/min", delta=f"{latest_media['encoding_errors'] - latest_media['encoding_errors_prev']}", delta_color="inverse")
@@ -912,7 +925,7 @@ def update_dashboard():
                 
                 for _, event in recent_events.iterrows():
                     severity = event['severity']
-                    event_color = get_status_color(severity)
+                    event_color = utils.get_status_color(severity)
                     st.markdown(
                         f"""
                         <div style="padding: 10px; border-left: 5px solid {event_color}; margin-bottom: 10px;">
@@ -997,7 +1010,7 @@ def update_dashboard():
             trend_analysis_placeholder.info("Health trend analysis will be available once more data is collected.")
         
         # Calculate system health score
-        system_health = calculate_system_health(
+        system_health = utils.calculate_system_health(
             st.session_state.hardware_metrics, 
             st.session_state.media_quality_metrics,
             st.session_state.anomalies,
@@ -1088,7 +1101,7 @@ def update_dashboard():
             recent_alerts = st.session_state.alert_history.sort_values('timestamp', ascending=False).head(10)
             
             for _, alert in recent_alerts.iterrows():
-                alert_color = get_status_color(alert['severity'])
+                alert_color = utils.get_status_color(alert['severity'])
                 st.markdown(
                     f"""
                     <div style="padding: 10px; border-left: 5px solid {alert_color}; margin-bottom: 10px;">
@@ -1453,6 +1466,421 @@ def initialize_data_if_empty():
             
             # Get recommended actions
             st.session_state.preventive_actions = st.session_state.predictive_model.get_preventive_actions()
+
+# Tab 4: CSV Data Analysis
+with tab4:
+    st.header("📊 CSV Data Analysis for Predictive Maintenance")
+    
+    # File upload section
+    st.subheader("Upload Your Data")
+    uploaded_file = st.file_uploader(
+        "Choose a CSV file with your system or equipment data",
+        type="csv",
+        help="Upload CSV files containing timestamps and numeric metrics for analysis"
+    )
+    
+    if uploaded_file is not None:
+        try:
+            # Read the uploaded CSV
+            csv_data = pd.read_csv(uploaded_file)
+            st.session_state.csv_data = csv_data
+            
+            # Show basic info about the uploaded data
+            st.success(f"Successfully loaded {len(csv_data)} rows and {len(csv_data.columns)} columns")
+            
+            # Display data preview
+            st.subheader("Data Preview")
+            st.dataframe(csv_data.head(10))
+            
+            # Analyze CSV structure
+            structure_analysis = st.session_state.csv_analyzer.analyze_csv_structure(csv_data)
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("Data Structure Analysis")
+                st.write(f"**Shape:** {structure_analysis['shape'][0]} rows × {structure_analysis['shape'][1]} columns")
+                st.write(f"**Numeric columns:** {len(structure_analysis['numeric_columns'])}")
+                st.write(f"**Potential time columns:** {len(structure_analysis['potential_time_columns'])}")
+                
+                # Show missing values
+                missing_values = structure_analysis['missing_values']
+                if any(missing_values.values()):
+                    st.warning("Missing values detected:")
+                    for col, missing in missing_values.items():
+                        if missing > 0:
+                            st.write(f"- {col}: {missing} missing values")
+            
+            with col2:
+                st.subheader("Configure Analysis")
+                
+                # Select time column
+                time_column = None
+                if structure_analysis['potential_time_columns']:
+                    time_column = st.selectbox(
+                        "Select time/date column (optional)",
+                        ["None"] + structure_analysis['potential_time_columns']
+                    )
+                    if time_column == "None":
+                        time_column = None
+                
+                # Select target column for prediction
+                target_column = None
+                if structure_analysis['numeric_columns']:
+                    target_column = st.selectbox(
+                        "Select target variable for prediction",
+                        ["Auto-detect"] + structure_analysis['numeric_columns']
+                    )
+                    if target_column == "Auto-detect":
+                        target_column = None
+            
+            # Analysis configuration
+            st.subheader("Analysis Options")
+            analysis_col1, analysis_col2, analysis_col3 = st.columns(3)
+            
+            with analysis_col1:
+                run_anomaly_detection = st.checkbox("Anomaly Detection", value=True)
+            
+            with analysis_col2:
+                run_predictive_modeling = st.checkbox("Predictive Modeling", value=True)
+            
+            with analysis_col3:
+                forecast_steps = st.number_input("Forecast Steps", min_value=5, max_value=50, value=10)
+            
+            # Run analysis button
+            if st.button("🚀 Run Analysis", type="primary"):
+                with st.spinner("Analyzing your data..."):
+                    # Prepare data
+                    processed_data = st.session_state.csv_analyzer.prepare_data_for_analysis(
+                        csv_data, time_column, target_column
+                    )
+                    
+                    results = {}
+                    
+                    # Anomaly detection
+                    if run_anomaly_detection:
+                        anomaly_data, anomaly_stats = st.session_state.csv_analyzer.detect_anomalies(processed_data)
+                        results['anomaly_data'] = anomaly_data
+                        results['anomaly_stats'] = anomaly_stats
+                    
+                    # Predictive modeling
+                    if run_predictive_modeling:
+                        model, model_stats = st.session_state.csv_analyzer.create_predictive_model(
+                            processed_data, target_column, forecast_steps
+                        )
+                        results['model'] = model
+                        results['model_stats'] = model_stats
+                    
+                    # Generate recommendations
+                    recommendations = st.session_state.csv_analyzer.generate_maintenance_recommendations(
+                        processed_data,
+                        results.get('anomaly_stats'),
+                        results.get('model_stats')
+                    )
+                    results['recommendations'] = recommendations
+                    
+                    # Store results
+                    st.session_state.csv_analysis_results = results
+                
+                st.success("Analysis completed!")
+        
+        except Exception as e:
+            st.error(f"Error processing file: {str(e)}")
+            st.info("Please ensure your CSV file has proper formatting with numeric columns for analysis.")
+    
+    # Display analysis results if available
+    if st.session_state.csv_analysis_results:
+        results = st.session_state.csv_analysis_results
+        
+        st.header("📈 Analysis Results")
+        
+        # Anomaly detection results
+        if 'anomaly_stats' in results and results['anomaly_stats']:
+            anomaly_stats = results['anomaly_stats']
+            
+            if 'error' not in anomaly_stats:
+                st.subheader("🔍 Anomaly Detection Results")
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Total Data Points", anomaly_stats['total_points'])
+                with col2:
+                    st.metric("Anomalies Detected", anomaly_stats['anomalies_detected'])
+                with col3:
+                    st.metric("Anomaly Rate", f"{anomaly_stats['anomaly_percentage']:.1f}%")
+                
+                # Show most anomalous features
+                if 'most_anomalous_features' in anomaly_stats and anomaly_stats['most_anomalous_features']:
+                    st.write("**Most Anomalous Features:**")
+                    for feature, score in list(anomaly_stats['most_anomalous_features'].items())[:3]:
+                        st.write(f"- {feature}: {score:.3f}")
+        
+        # Predictive modeling results
+        if 'model_stats' in results and results['model_stats']:
+            model_stats = results['model_stats']
+            
+            if 'error' not in model_stats:
+                st.subheader("🎯 Predictive Model Results")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Model Training Score", f"{model_stats['train_score']:.3f}")
+                    st.metric("Model Test Score", f"{model_stats['test_score']:.3f}")
+                
+                with col2:
+                    st.write("**Target Variable:**", model_stats['target_column'])
+                    st.write("**Features Used:**", len(model_stats['feature_columns']))
+                
+                # Feature importance
+                if 'feature_importance' in model_stats:
+                    st.write("**Feature Importance:**")
+                    importance_df = pd.DataFrame([
+                        {'Feature': k, 'Importance': v} 
+                        for k, v in model_stats['feature_importance'].items()
+                    ]).sort_values('Importance', ascending=False)
+                    
+                    fig = px.bar(
+                        importance_df.head(10), 
+                        x='Importance', 
+                        y='Feature', 
+                        orientation='h',
+                        title="Top 10 Most Important Features"
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+        
+        # Visualization charts
+        if 'anomaly_data' in results and not results['anomaly_data'].empty:
+            charts = st.session_state.csv_analyzer.create_visualization_charts(
+                results['anomaly_data'],
+                results.get('anomaly_data'),
+                results.get('model_stats', {}).get('forecast_data')
+            )
+            
+            if charts:
+                st.subheader("📊 Data Visualizations")
+                
+                for chart_name, chart_fig in charts.items():
+                    st.plotly_chart(chart_fig, use_container_width=True)
+        
+        # Maintenance recommendations
+        if 'recommendations' in results:
+            rec = results['recommendations']
+            
+            st.subheader("🔧 Maintenance Recommendations")
+            
+            # Priority indicator
+            priority_color = "🔴" if rec['maintenance_priority'] == 'High' else "🟢"
+            st.write(f"**Priority Level:** {priority_color} {rec['maintenance_priority']}")
+            
+            # Alerts
+            if rec['alerts']:
+                st.write("**⚠️ Alerts:**")
+                for alert in rec['alerts']:
+                    st.warning(alert)
+            
+            # Recommendations
+            st.write("**📋 Recommended Actions:**")
+            for i, recommendation in enumerate(rec['recommendations'], 1):
+                st.write(f"{i}. {recommendation}")
+
+# Tab 5: System Health Monitor
+with tab5:
+    st.header("🖥️ Real-Time System Health Monitor")
+    st.markdown("Monitor your computer's actual hardware performance in real-time")
+    
+    # Control buttons
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("📊 Collect System Data", type="primary"):
+            with st.spinner("Collecting system health data..."):
+                # Get real-time system data
+                health_data = st.session_state.system_monitor.get_health_metrics_df()
+                
+                # Append to existing data
+                if st.session_state.real_system_data.empty:
+                    st.session_state.real_system_data = health_data
+                else:
+                    st.session_state.real_system_data = safe_concat(
+                        st.session_state.real_system_data, 
+                        health_data
+                    )
+                
+                # Keep only last 100 data points
+                if len(st.session_state.real_system_data) > 100:
+                    st.session_state.real_system_data = st.session_state.real_system_data.tail(100)
+            
+            st.success("System data collected!")
+    
+    with col2:
+        if st.button("🔍 Analyze Health Trends"):
+            if not st.session_state.real_system_data.empty:
+                with st.spinner("Analyzing system health trends..."):
+                    # Analyze health trends
+                    trend_analysis = st.session_state.health_analyzer.analyze_health_trends(
+                        st.session_state.real_system_data
+                    )
+                    st.session_state.health_trend_analysis = trend_analysis
+                
+                st.success("Health analysis completed!")
+            else:
+                st.warning("Please collect some system data first!")
+    
+    with col3:
+        if st.button("🔮 Predict Maintenance"):
+            if not st.session_state.real_system_data.empty:
+                with st.spinner("Predicting maintenance needs..."):
+                    # Predict maintenance needs
+                    maintenance_prediction = st.session_state.health_analyzer.predict_maintenance_needs(
+                        st.session_state.real_system_data
+                    )
+                    st.session_state.maintenance_prediction = maintenance_prediction
+                
+                st.success("Maintenance prediction completed!")
+            else:
+                st.warning("Please collect some system data first!")
+    
+    # Display current system status
+    if not st.session_state.real_system_data.empty:
+        latest_data = st.session_state.real_system_data.iloc[-1]
+        
+        st.subheader("Current System Status")
+        
+        # Current metrics
+        metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+        
+        with metric_col1:
+            st.metric(
+                "CPU Usage", 
+                f"{latest_data['cpu_usage']:.1f}%",
+                delta=None
+            )
+        
+        with metric_col2:
+            st.metric(
+                "Memory Usage", 
+                f"{latest_data['memory_usage']:.1f}%",
+                delta=None
+            )
+        
+        with metric_col3:
+            st.metric(
+                "Disk Usage", 
+                f"{latest_data['disk_usage']:.1f}%",
+                delta=None
+            )
+        
+        with metric_col4:
+            st.metric(
+                "Total Processes", 
+                f"{latest_data['total_processes']:.0f}",
+                delta=None
+            )
+        
+        # System health chart
+        st.subheader("System Health Trends")
+        
+        if len(st.session_state.real_system_data) > 1:
+            fig = go.Figure()
+            
+            # Add CPU usage
+            fig.add_trace(go.Scatter(
+                x=st.session_state.real_system_data['timestamp'],
+                y=st.session_state.real_system_data['cpu_usage'],
+                name='CPU Usage',
+                line=dict(color='#FF6B6B', width=2)
+            ))
+            
+            # Add Memory usage
+            fig.add_trace(go.Scatter(
+                x=st.session_state.real_system_data['timestamp'],
+                y=st.session_state.real_system_data['memory_usage'],
+                name='Memory Usage',
+                line=dict(color='#4ECDC4', width=2)
+            ))
+            
+            # Add Disk usage
+            fig.add_trace(go.Scatter(
+                x=st.session_state.real_system_data['timestamp'],
+                y=st.session_state.real_system_data['disk_usage'],
+                name='Disk Usage',
+                line=dict(color='#45B7D1', width=2)
+            ))
+            
+            fig.update_layout(
+                title='Real-Time System Resource Usage',
+                xaxis_title='Time',
+                yaxis_title='Usage (%)',
+                yaxis=dict(range=[0, 100]),
+                hovermode='x',
+                height=400
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # System information
+        st.subheader("System Information")
+        sys_info = st.session_state.system_monitor.system_info
+        
+        info_col1, info_col2 = st.columns(2)
+        
+        with info_col1:
+            st.write(f"**Platform:** {sys_info['platform']} {sys_info['platform_release']}")
+            st.write(f"**Architecture:** {sys_info['architecture']}")
+            st.write(f"**Hostname:** {sys_info['hostname']}")
+        
+        with info_col2:
+            st.write(f"**Memory Total:** {latest_data['memory_total_gb']:.1f} GB")
+            st.write(f"**Memory Available:** {latest_data['memory_available_gb']:.1f} GB")
+            st.write(f"**Disk Free:** {latest_data['disk_free_gb']:.1f} GB")
+    
+    # Display health trend analysis if available
+    if hasattr(st.session_state, 'health_trend_analysis'):
+        trend_analysis = st.session_state.health_trend_analysis
+        
+        st.subheader("Health Trend Analysis")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            trend_value = trend_analysis.get('trend', 'Unknown')
+            st.write(f"**Overall Trend:** {trend_value}")
+            if 'health_score' in trend_analysis:
+                st.metric("Health Score", f"{trend_analysis['health_score']:.1f}/100")
+        
+        with col2:
+            alerts = trend_analysis.get('alerts', [])
+            if alerts:
+                st.write("**🚨 Alerts:**")
+                for alert in alerts:
+                    st.warning(alert)
+        
+        st.write("**📋 Recommendations:**")
+        recommendations = trend_analysis.get('recommendations', ['No recommendations available'])
+        for i, rec in enumerate(recommendations, 1):
+            st.write(f"{i}. {rec}")
+    
+    # Display maintenance prediction if available
+    if hasattr(st.session_state, 'maintenance_prediction'):
+        maintenance_pred = st.session_state.maintenance_prediction
+        
+        st.subheader("Maintenance Prediction")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.write(f"**Prediction:** {maintenance_pred['prediction']}")
+            st.metric("Confidence", f"{maintenance_pred['confidence']:.1%}")
+        
+        with col2:
+            if maintenance_pred.get('risk_factors'):
+                st.write("**⚠️ Risk Factors:**")
+                for factor in maintenance_pred['risk_factors']:
+                    st.warning(factor)
+        
+        st.write("**🔧 Recommended Actions:**")
+        for i, action in enumerate(maintenance_pred['recommended_actions'], 1):
+            st.write(f"{i}. {action}")
 
 # Main app execution
 if __name__ == "__main__":
